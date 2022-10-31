@@ -1,2 +1,1 @@
-# MalariaFind
-Malaria detection using CNN model
+# Malaria-Detection
