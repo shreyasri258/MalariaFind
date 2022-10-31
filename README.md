@@ -1,1 +1,5 @@
-# Malaria-Detection
+
+
+Demo: https://malaria-diagnosis.herokuapp.com/
+
+
