@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
-
-from __future__ import division, print_function
+﻿from __future__ import division, print_function
 # coding=utf-8
 import sys
 import os
@@ -10,52 +7,44 @@ import re
 import numpy as np
 
 # Keras
-from tensorflow.keras.applications.imagenet_utils import preprocess_input, decode_predictions
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
+from keras.applications.imagenet_utils import preprocess_input, decode_predictions
+from keras.models import load_model
+from keras.preprocessing import image
 
 # Flask utils
 from flask import Flask, redirect, url_for, request, render_template
 from werkzeug.utils import secure_filename
-#from gevent.pywsgi import WSGIServer
+from gevent.wsgi import WSGIServer
 
 # Define a flask app
 app = Flask(__name__)
 
 # Model saved with Keras model.save()
-MODEL_PATH ='model_vgg19.h5'
+MODEL_PATH = 'models/my_model.h5'
 
-# Load your trained model
+#Load your trained model
 model = load_model(MODEL_PATH)
+model._make_predict_function()          # Necessary to make everything ready to run on the GPU ahead of time
+print('Model loaded. Start serving...')
 
-
-
+# You can also use pretrained model from Keras
+# Check https://keras.io/applications/
+#from keras.applications.resnet50 import ResNet50
+#model = ResNet50(weights='imagenet')
+#print('Model loaded. Check http://127.0.0.1:5000/')
 
 
 def model_predict(img_path, model):
-    img = image.load_img(img_path, target_size=(224, 224))
+    img = image.load_img(img_path, target_size=(50,50)) #target_size must agree with what the trained model expects!!
 
     # Preprocessing the image
-    x = image.img_to_array(img)
-    # x = np.true_divide(x, 255)
-    ## Scaling
-    x=x/255
-    x = np.expand_dims(x, axis=0)
+    img = image.img_to_array(img)
+    img = np.expand_dims(img, axis=0)
+
    
-
-    # Be careful how your trained model deals with the input
-    # otherwise, it won't make correct prediction!
-    x = preprocess_input(x)
-
-    preds = model.predict(x)
-    preds=np.argmax(preds, axis=1)
-    if preds==0:
-        preds="The Person is Infected With Pneumonia"
-    else:
-        preds="The Person is not Infected With Pneumonia"
-    
-    
-    return preds
+    preds = model.predict(img)
+    pred = np.argmax(preds,axis = 1)
+    return pred
 
 
 @app.route('/', methods=['GET'])
@@ -77,11 +66,23 @@ def upload():
         f.save(file_path)
 
         # Make prediction
-        preds = model_predict(file_path, model)
-        result=preds
-        return result
+        pred = model_predict(file_path, model)
+        os.remove(file_path)#removes file from the server after prediction has been returned
+
+        # Arrange the correct return according to the model. 
+		# In this model 1 is Pneumonia and 0 is Normal.
+        str1 = 'Malaria Parasitized'
+        str2 = 'Normal'
+        if pred[0] == 0:
+            return str1
+        else:
+            return str2
     return None
 
-
+    #this section is used by gunicorn to serve the app on Heroku
 if __name__ == '__main__':
-    app.run(debug=True)
+        app.run()
+    #uncomment this section to serve the app locally with gevent at:  http://localhost:5000
+    # Serve the app with gevent 
+    #http_server = WSGIServer(('', 5000), app)
+    #http_server.serve_forever()
