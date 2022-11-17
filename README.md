@@ -1,4 +1,4 @@
-Malaria Detection using ML  
+Malaria Detection using ML   
 
 Demo: https://malaria-diagnosis.herokuapp.com/
 
